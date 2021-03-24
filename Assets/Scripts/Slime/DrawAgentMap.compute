@@ -1,0 +1,28 @@
+﻿#pragma kernel DrawAgentMap
+
+struct Agent {
+	float2 position;
+	float angle;
+	float4 mask;
+	int speciesIndex;
+};
+
+RWStructuredBuffer<Agent> agents;
+uint numAgents;
+
+RWTexture2D<float4> TargetTexture;
+
+[numthreads(16,1,1)]
+void DrawAgentMap (uint3 id : SV_DispatchThreadID)
+{
+	if (id.x >= numAgents) {
+		return;
+	}
+
+
+	Agent agent = agents[id.x];
+	// Draw to trail map
+	int cellX = (int)agent.position.x;
+	int cellY = (int)agent.position.y;
+	TargetTexture[int2(cellX, cellY)] = 1;
+}

@@ -1,0 +1,169 @@
+﻿#pragma kernel Update
+
+struct Agent {
+	float2 position;
+	float angle;
+	int4 speciesMask;
+	int speciesIndex;
+};
+
+struct SpeciesSettings {
+	float moveSpeed;
+	float turnSpeed;
+
+	float sensorAngleDegrees;
+	float sensorOffsetDst;
+	int sensorSize;
+};
+
+StructuredBuffer<SpeciesSettings> speciesSettings;
+
+
+RWStructuredBuffer<Agent> agents;
+uint numAgents;
+
+RWTexture2D<float4> TrailMap;
+int width;
+int height;
+
+float trailWeight;
+
+float deltaTime;
+float time;
+
+// Hash function www.cs.ubc.ca/~rbridson/docs/schechter-sca08-turbulence.pdf
+uint hash(uint state)
+{
+    state ^= 2747636419u;
+    state *= 2654435769u;
+    state ^= state >> 16;
+    state *= 2654435769u;
+    state ^= state >> 16;
+    state *= 2654435769u;
+    return state;
+}
+
+float scaleToRange01(uint state)
+{
+    return state / 4294967295.0;
+}
+
+
+float sense(Agent agent, SpeciesSettings settings, float sensorAngleOffset) {
+	float sensorAngle = agent.angle + sensorAngleOffset;
+	float2 sensorDir = float2(cos(sensorAngle), sin(sensorAngle));
+
+	float2 sensorPos = agent.position + sensorDir * settings.sensorOffsetDst;
+	int sensorCentreX = (int) sensorPos.x;
+	int sensorCentreY = (int) sensorPos.y;
+
+	float sum = 0;
+
+	int4 senseWeight = agent.speciesMask * 2 - 1;
+
+	for (int offsetX = -settings.sensorSize; offsetX <= settings.sensorSize; offsetX ++) {
+		for (int offsetY = -settings.sensorSize; offsetY <= settings.sensorSize; offsetY ++) {
+			int sampleX = min(width - 1, max(0, sensorCentreX + offsetX));
+			int sampleY = min(height - 1, max(0, sensorCentreY + offsetY));
+			sum += dot(senseWeight, TrailMap[int2(sampleX,sampleY)]);
+		}
+	}
+
+	return sum;
+}
+
+[numthreads(16,1,1)]
+void Update (uint3 id : SV_DispatchThreadID)
+{
+	if (id.x >= numAgents) {
+		return;
+	}
+
+
+	Agent agent = agents[id.x];
+	SpeciesSettings settings = speciesSettings[agent.speciesIndex];
+	float2 pos = agent.position;
+
+	uint random = hash(pos.y * width + pos.x + hash(id.x + time * 100000));
+
+	// Steer based on sensory data
+	float sensorAngleRad = settings.sensorAngleDegrees * (3.1415 / 180);
+	float weightForward = sense(agent, settings, 0);
+	float weightLeft = sense(agent, settings, sensorAngleRad);
+	float weightRight = sense(agent, settings, -sensorAngleRad);
+
+	
+	float randomSteerStrength = scaleToRange01(random);
+
+	// Continue in same direction
+	if (weightForward > weightLeft && weightForward > weightRight) {
+		agents[id.x].angle += 0;
+	}
+	else if (weightForward < weightLeft && weightForward < weightRight) {
+		agents[id.x].angle += (randomSteerStrength - 0.5) * 2 * settings.turnSpeed * deltaTime;
+	}
+
+	// Turn right
+	else if (weightRight > weightLeft) {
+		agents[id.x].angle -= randomSteerStrength * settings.turnSpeed * deltaTime;
+	}
+	// Turn left
+	else if (weightLeft > weightRight) {
+		agents[id.x].angle += randomSteerStrength * settings.turnSpeed * deltaTime;
+	}
+		// Turn randomly
+	else {
+		
+	}
+
+	// Update position
+	float2 direction = float2(cos(agent.angle), sin(agent.angle));
+	float2 newPos = agent.position + direction * deltaTime * settings.moveSpeed;
+
+	
+	// Clamp position to map boundaries, and pick new random move dir if hit boundary
+	if (newPos.x < 0 || newPos.x >= width || newPos.y < 0 || newPos.y >= height) {
+		random = hash(random);
+		float randomAngle = scaleToRange01(random) * 2 * 3.1415;
+
+		newPos.x = min(width-0.01,max(0, newPos.x));
+		newPos.y = min(height-0.01,max(0, newPos.y));
+		agents[id.x].angle = randomAngle;
+	}
+	else {
+		TrailMap[int2(newPos.x, newPos.y)] += agent.speciesMask * trailWeight * deltaTime;
+	}
+	
+	agents[id.x].position = newPos;
+}
+
+#pragma kernel Diffuse
+
+float decayRate;
+float diffuseRate;
+RWTexture2D<float4> DiffusedTrailMap;
+
+[numthreads(8,8,1)]
+void Diffuse (uint3 id : SV_DispatchThreadID)
+{
+	if (id.x < 0 || id.x >= (uint)width || id.y < 0 || id.y >= (uint)height) {
+		return;
+	}
+
+	float4 sum = 0;
+	float4 originalCol = TrailMap[id.xy];
+	// 3x3 blur
+	for (int offsetX = -1; offsetX <= 1; offsetX ++) {
+		for (int offsetY = -1; offsetY <= 1; offsetY ++) {
+			int sampleX = min(width-1, max(0, id.x + offsetX));
+			int sampleY = min(height-1, max(0, id.y + offsetY));
+			sum += TrailMap[int2(sampleX,sampleY)];
+		}
+	}
+
+	float4 blurredCol = sum / 9;
+	float diffuseWeight = saturate(diffuseRate * deltaTime);
+	blurredCol = originalCol * (1 - diffuseWeight) + blurredCol * (diffuseWeight);
+
+	DiffusedTrailMap[id.xy] = blurredCol * saturate(1 - decayRate * deltaTime);
+}
