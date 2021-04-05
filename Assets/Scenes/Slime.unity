@@ -237,7 +237,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   compute: {fileID: 7200000, guid: a0aea66b8c503e748bb334583d5db67c, type: 3}
   drawAgentsCS: {fileID: 7200000, guid: 9d6969cce8474ed4899115f5d816b0a5, type: 3}
-  settings: {fileID: 11400000, guid: b4bd879e1f386d84eaf103b21d3c832b, type: 2}
+  settings: {fileID: 11400000, guid: 0367b3dddb285494bbb8c9e43002e188, type: 2}
   showAgentsOnly: 0
   filterMode: 1
   format: 48

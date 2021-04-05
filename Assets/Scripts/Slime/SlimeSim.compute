@@ -94,27 +94,24 @@ void Update (uint3 id : SV_DispatchThreadID)
 
 	
 	float randomSteerStrength = scaleToRange01(random);
+	float turnSpeed = settings.turnSpeed * 2 * 3.1415;
 
 	// Continue in same direction
 	if (weightForward > weightLeft && weightForward > weightRight) {
 		agents[id.x].angle += 0;
 	}
 	else if (weightForward < weightLeft && weightForward < weightRight) {
-		agents[id.x].angle += (randomSteerStrength - 0.5) * 2 * settings.turnSpeed * deltaTime;
+		agents[id.x].angle += (randomSteerStrength - 0.5) * 2 * turnSpeed * deltaTime;
 	}
-
 	// Turn right
 	else if (weightRight > weightLeft) {
-		agents[id.x].angle -= randomSteerStrength * settings.turnSpeed * deltaTime;
+		agents[id.x].angle -= randomSteerStrength * turnSpeed * deltaTime;
 	}
 	// Turn left
 	else if (weightLeft > weightRight) {
-		agents[id.x].angle += randomSteerStrength * settings.turnSpeed * deltaTime;
+		agents[id.x].angle += randomSteerStrength * turnSpeed * deltaTime;
 	}
-		// Turn randomly
-	else {
-		
-	}
+
 
 	// Update position
 	float2 direction = float2(cos(agent.angle), sin(agent.angle));
@@ -126,12 +123,13 @@ void Update (uint3 id : SV_DispatchThreadID)
 		random = hash(random);
 		float randomAngle = scaleToRange01(random) * 2 * 3.1415;
 
-		newPos.x = min(width-0.01,max(0, newPos.x));
-		newPos.y = min(height-0.01,max(0, newPos.y));
+		newPos.x = min(width-1,max(0, newPos.x));
+		newPos.y = min(height-1,max(0, newPos.y));
 		agents[id.x].angle = randomAngle;
 	}
 	else {
-		TrailMap[int2(newPos.x, newPos.y)] += agent.speciesMask * trailWeight * deltaTime;
+		float4 oldTrail = TrailMap[int2(newPos)];
+		TrailMap[int2(newPos)] = min(1, oldTrail + agent.speciesMask * trailWeight * deltaTime);
 	}
 	
 	agents[id.x].position = newPos;
@@ -165,5 +163,6 @@ void Diffuse (uint3 id : SV_DispatchThreadID)
 	float diffuseWeight = saturate(diffuseRate * deltaTime);
 	blurredCol = originalCol * (1 - diffuseWeight) + blurredCol * (diffuseWeight);
 
-	DiffusedTrailMap[id.xy] = blurredCol * saturate(1 - decayRate * deltaTime);
+	//DiffusedTrailMap[id.xy] = blurredCol * saturate(1 - decayRate * deltaTime);
+	DiffusedTrailMap[id.xy] = max(0, blurredCol - decayRate * deltaTime);
 }

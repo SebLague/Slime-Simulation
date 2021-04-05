@@ -104,11 +104,27 @@ public class Simulation : MonoBehaviour
 
 	}
 
-	void Update()
+	void FixedUpdate()
 	{
 		for (int i = 0; i < settings.stepsPerFrame; i++)
 		{
 			RunSimulation();
+		}
+	}
+
+	void LateUpdate()
+	{
+		if (showAgentsOnly)
+		{
+			ComputeHelper.ClearRenderTexture(displayTexture);
+
+			drawAgentsCS.SetTexture(0, "TargetTexture", displayTexture);
+			ComputeHelper.Dispatch(drawAgentsCS, settings.numAgents, 1, 1, 0);
+
+		}
+		else
+		{
+			ComputeHelper.CopyRenderTexture(trailMap, displayTexture);
 		}
 	}
 
@@ -126,8 +142,8 @@ public class Simulation : MonoBehaviour
 		compute.SetTexture(diffuseMapKernel, "DiffusedTrailMap", diffusedTrailMap);
 
 		// Assign settings
-		compute.SetFloat("deltaTime", Time.deltaTime);
-		compute.SetFloat("time", Time.time);
+		compute.SetFloat("deltaTime", Time.fixedDeltaTime);
+		compute.SetFloat("time", Time.fixedTime);
 
 		compute.SetFloat("trailWeight", settings.trailWeight);
 		compute.SetFloat("decayRate", settings.decayRate);
@@ -138,20 +154,6 @@ public class Simulation : MonoBehaviour
 		ComputeHelper.Dispatch(compute, settings.width, settings.height, 1, kernelIndex: diffuseMapKernel);
 
 		ComputeHelper.CopyRenderTexture(diffusedTrailMap, trailMap);
-
-		if (showAgentsOnly)
-		{
-			ComputeHelper.ClearRenderTexture(displayTexture);
-
-			drawAgentsCS.SetTexture(0, "TargetTexture", displayTexture);
-			ComputeHelper.Dispatch(drawAgentsCS, settings.numAgents, 1, 1, 0);
-
-		}
-		else
-		{
-			ComputeHelper.CopyRenderTexture(trailMap, displayTexture);
-		}
-
 	}
 
 	void OnDestroy()
