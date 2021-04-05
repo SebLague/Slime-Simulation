@@ -75,14 +75,15 @@ public class Simulation : MonoBehaviour
 
 			Vector3Int speciesMask;
 			int speciesIndex = 0;
+			int numSpecies = settings.speciesSettings.Length;
 
-			if (settings.numSpecies == 1)
+			if (numSpecies == 1)
 			{
 				speciesMask = Vector3Int.one;
 			}
 			else
 			{
-				int species = Random.Range(1, settings.numSpecies + 1);
+				int species = Random.Range(1, numSpecies + 1);
 				speciesIndex = species - 1;
 				speciesMask = new Vector3Int((species == 1) ? 1 : 0, (species == 2) ? 1 : 0, (species == 3) ? 1 : 0);
 			}

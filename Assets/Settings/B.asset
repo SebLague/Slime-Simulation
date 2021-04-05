@@ -12,11 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2665318e53759e74db7a2d8238331945, type: 3}
   m_Name: B
   m_EditorClassIdentifier: 
-  stepsPerFrame: 5
+  stepsPerFrame: 2
   width: 1920
   height: 1080
-  numAgents: 500000
-  numSpecies: 2
+  numAgents: 25000
   spawnMode: 2
   trailWeight: 3
   decayRate: 0.5
@@ -26,9 +25,9 @@ MonoBehaviour:
     turnSpeed: 30
     sensorAngleSpacing: 45
     sensorOffsetDst: 20
-    sensorSize: 5
+    sensorSize: 1
   - moveSpeed: 50
     turnSpeed: -90
     sensorAngleSpacing: 112
     sensorOffsetDst: 30
-    sensorSize: 5
+    sensorSize: 1

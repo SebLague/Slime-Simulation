@@ -10,8 +10,6 @@ public class SlimeSettings : ScriptableObject
 	public int width = 1280;
 	public int height = 720;
 	public int numAgents = 100;
-	[Range(1, 3)]
-	public int numSpecies = 1;
 	public Simulation.SpawnMode spawnMode;
 
 	[Header("Trail Settings")]
