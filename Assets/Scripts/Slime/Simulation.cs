@@ -139,6 +139,8 @@ public class Simulation : MonoBehaviour
 
 		// Assign textures
 		compute.SetTexture(updateKernel, "TrailMap", trailMap);
+		compute.SetTexture(updateKernel, "DiffusedTrailMap", diffusedTrailMap);
+
 		compute.SetTexture(diffuseMapKernel, "TrailMap", trailMap);
 		compute.SetTexture(diffuseMapKernel, "DiffusedTrailMap", diffusedTrailMap);
 
