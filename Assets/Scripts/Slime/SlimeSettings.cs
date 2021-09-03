@@ -30,5 +30,8 @@ public class SlimeSettings : ScriptableObject
 		public float sensorAngleSpacing;
 		public float sensorOffsetDst;
 		[Min(1)] public int sensorSize;
+
+		[Header("Display settings")]
+		public Color colour;
 	}
 }

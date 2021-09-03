@@ -26,3 +26,4 @@ MonoBehaviour:
     sensorAngleSpacing: 30
     sensorOffsetDst: 35
     sensorSize: 1
+    colour: {r: 1, g: 1, b: 1, a: 0}

@@ -8,6 +8,7 @@ public class Simulation : MonoBehaviour
 
 	const int updateKernel = 0;
 	const int diffuseMapKernel = 1;
+	const int colourKernel = 2;
 
 	public ComputeShader compute;
 	public ComputeShader drawAgentsCS;
@@ -37,11 +38,17 @@ public class Simulation : MonoBehaviour
 
 	void Init()
 	{
-
 		// Create render textures
 		ComputeHelper.CreateRenderTexture(ref trailMap, settings.width, settings.height, filterMode, format);
 		ComputeHelper.CreateRenderTexture(ref diffusedTrailMap, settings.width, settings.height, filterMode, format);
 		ComputeHelper.CreateRenderTexture(ref displayTexture, settings.width, settings.height, filterMode, format);
+
+		// Assign textures
+		compute.SetTexture(updateKernel, "TrailMap", trailMap);
+		compute.SetTexture(diffuseMapKernel, "TrailMap", trailMap);
+		compute.SetTexture(diffuseMapKernel, "DiffusedTrailMap", diffusedTrailMap);
+		compute.SetTexture(colourKernel, "ColourMap", displayTexture);
+		compute.SetTexture(colourKernel, "TrailMap", trailMap);
 
 		// Create agents with initial positions and angles
 		Agent[] agents = new Agent[settings.numAgents];
@@ -88,8 +95,6 @@ public class Simulation : MonoBehaviour
 				speciesMask = new Vector3Int((species == 1) ? 1 : 0, (species == 2) ? 1 : 0, (species == 3) ? 1 : 0);
 			}
 
-
-
 			agents[i] = new Agent() { position = startPos, angle = angle, speciesMask = speciesMask, speciesIndex = speciesIndex };
 		}
 
@@ -125,22 +130,17 @@ public class Simulation : MonoBehaviour
 		}
 		else
 		{
-			ComputeHelper.CopyRenderTexture(trailMap, displayTexture);
+			ComputeHelper.Dispatch(compute, settings.width, settings.height, 1, kernelIndex : colourKernel);
+		//	ComputeHelper.CopyRenderTexture(trailMap, displayTexture);
 		}
 	}
 
 	void RunSimulation()
 	{
-
 		var speciesSettings = settings.speciesSettings;
 		ComputeHelper.CreateStructuredBuffer(ref settingsBuffer, speciesSettings);
-		compute.SetBuffer(0, "speciesSettings", settingsBuffer);
-
-
-		// Assign textures
-		compute.SetTexture(updateKernel, "TrailMap", trailMap);
-		compute.SetTexture(diffuseMapKernel, "TrailMap", trailMap);
-		compute.SetTexture(diffuseMapKernel, "DiffusedTrailMap", diffusedTrailMap);
+		compute.SetBuffer(updateKernel, "speciesSettings", settingsBuffer);
+		compute.SetBuffer(colourKernel, "speciesSettings", settingsBuffer);
 
 		// Assign settings
 		compute.SetFloat("deltaTime", Time.fixedDeltaTime);
@@ -149,6 +149,7 @@ public class Simulation : MonoBehaviour
 		compute.SetFloat("trailWeight", settings.trailWeight);
 		compute.SetFloat("decayRate", settings.decayRate);
 		compute.SetFloat("diffuseRate", settings.diffuseRate);
+		compute.SetInt("numSpecies", speciesSettings.Length);
 
 
 		ComputeHelper.Dispatch(compute, settings.numAgents, 1, 1, kernelIndex: updateKernel);
