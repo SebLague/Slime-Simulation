@@ -110,7 +110,7 @@ public class Simulation : MonoBehaviour
 
 	}
 
-	void FixedUpdate()
+	void Update()
 	{
 		for (int i = 0; i < settings.stepsPerFrame; i++)
 		{
